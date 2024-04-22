@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Home</title>
+  </head>
+  <body>
+    <h2>Welcome, {{username}}!</h2>
+    <a href="/logout">Logout</a>
+    <h3>Posts</h3>
+    <form method="post" action="/posts">
+      <input type="text" name="message">
+      <input type="submit" value="Post!">
+    </form>
+    <ul>
+      {% if not posts %}
+      No posts.
+      {% endif %}
+      {% for post in posts %}
+      <li>{{ post[0] | safe }}</li>
+      {% endfor %}
+    </ul>
+  </body>
+</html>
