@@ -45,7 +45,7 @@ def login():
             )
             con.commit()
             response = redirect("/home")
-            response.set_cookie("session_token", token)
+            response.set_cookie("session_token", token, httponly=True)
             return response
         else:
             return render_template(
