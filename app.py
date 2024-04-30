@@ -1,9 +1,9 @@
 import secrets
 import sqlite3
 
-from flask import Flask, request, render_template, redirect
+import bleach
+from flask import Flask, redirect, render_template, request
 from flask_wtf.csrf import CSRFProtect
-
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = secrets.token_hex()
@@ -84,7 +84,7 @@ def posts():
         )
         user = res.fetchone()
         if user:
-            message = request.form["message"].replace("<", "&lt;").replace(">", "&gt;")
+            message = bleach.clean(request.form["message"])
             cur.execute(
                 "INSERT INTO posts (message, user) VALUES (?, ?)",
                 (message, user[0]),
