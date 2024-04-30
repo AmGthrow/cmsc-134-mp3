@@ -81,9 +81,10 @@ def posts():
         )
         user = res.fetchone()
         if user:
+            message = request.form["message"].replace("<", "&lt;").replace(">", "&gt;")
             cur.execute(
                 "INSERT INTO posts (message, user) VALUES (?, ?)",
-                (request.form["message"], user[0]),
+                (message, user[0]),
             )
             con.commit()
             return redirect("/home")
