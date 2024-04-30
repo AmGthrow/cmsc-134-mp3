@@ -8,6 +8,7 @@
     <a href="/logout">Logout</a>
     <h3>Posts</h3>
     <form method="post" action="/posts">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
       <input type="text" name="message">
       <input type="submit" value="Post!">
     </form>

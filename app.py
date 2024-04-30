@@ -2,9 +2,12 @@ import secrets
 import sqlite3
 
 from flask import Flask, request, render_template, redirect
+from flask_wtf.csrf import CSRFProtect
 
 
 app = Flask(__name__)
+app.config["SECRET_KEY"] = secrets.token_hex()
+csrf = CSRFProtect(app)
 con = sqlite3.connect("app.db", check_same_thread=False)
 
 
