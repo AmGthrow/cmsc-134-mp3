@@ -3,6 +3,7 @@ import sqlite3
 
 import bleach
 from flask import Flask, redirect, render_template, request
+from flask_csp.csp import csp_header
 from flask_wtf.csrf import CSRFProtect
 
 app = Flask(__name__)
@@ -55,6 +56,7 @@ def login():
 
 @app.route("/")
 @app.route("/home")
+@csp_header()
 def home():
     cur = con.cursor()
     if request.cookies.get("session_token"):
