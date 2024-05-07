@@ -1,3 +1,13 @@
+# Instructions
+
+Attached is a sample web application written in Python (Flask) and makes use of sqlite3 as its database. The zipfile contains a README.txt which explains a bit more about how to get the web application running on your end.
+
+The web application features a login page and a homepage, where the user can view and make their own posts.
+
+Your task is to identify and fix the security flaws found in this web application, keeping in mind that our topic was on SQL injections, CSRF, XSS. You may, however, identify and fix other issues that we have not touched on that you may find in the web application.
+
+Report about the flaws and your fixes in a writeup.
+
 # SQL Injections
 
 ## Attack 1
