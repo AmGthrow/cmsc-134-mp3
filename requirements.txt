@@ -2,6 +2,7 @@ bleach==6.1.0
 blinker==1.7.0
 click==8.1.7
 Flask==3.0.3
+flask-csp==0.10
 Flask-WTF==1.2.1
 importlib_metadata==7.1.0
 itsdangerous==2.2.0
